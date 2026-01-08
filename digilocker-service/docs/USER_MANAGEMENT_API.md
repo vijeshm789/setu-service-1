@@ -8,7 +8,7 @@ Three new API endpoints have been added for direct management of UserDigiLocker 
 2. **GET /digilocker/user** - Retrieve UserDigiLocker record
 3. **DELETE /digilocker/user** - Delete UserDigiLocker record
 
-All endpoints require JWT authentication.
+All endpoints require userId parameter for identification (no authentication required).
 
 ---
 
@@ -17,13 +17,13 @@ All endpoints require JWT authentication.
 ### Endpoint
 ```
 POST /digilocker/user
-Authorization: Bearer <jwt_token>
 Content-Type: application/json
 ```
 
 ### Request Body
 ```json
 {
+  "userId": "user123",
   "clientId": "your_digilocker_client_id",
   "clientSecret": "your_digilocker_client_secret",
   "accessToken": "your_digilocker_access_token",
@@ -33,6 +33,7 @@ Content-Type: application/json
 ```
 
 **Parameters:**
+- `userId` (required): User ID
 - `clientId` (required): DigiLocker client ID
 - `clientSecret` (required): DigiLocker client secret
 - `accessToken` (required): DigiLocker access token
@@ -62,14 +63,12 @@ Content-Type: application/json
    const response = await axios.post(
      'http://localhost:3000/digilocker/user',
      {
+       userId: 'user123',
        clientId: 'your_client_id',
        clientSecret: 'your_client_secret',
        accessToken: 'existing_access_token',
        refreshToken: 'existing_refresh_token',
        expiresIn: 3600
-     },
-     {
-       headers: { Authorization: `Bearer ${jwtToken}` }
      }
    );
    ```
@@ -77,34 +76,36 @@ Content-Type: application/json
 2. **Admin Operations**
    ```javascript
    // Admin setting up DigiLocker for a user
-   const adminToken = generateJWT(targetUserId);
-   await createUserDigiLocker(adminToken, tokens);
+   await axios.post('http://localhost:3000/digilocker/user', {
+     userId: 'target_user_id',
+     clientId: 'client_id',
+     clientSecret: 'client_secret',
+     accessToken: 'access_token',
+     refreshToken: 'refresh_token',
+     expiresIn: 3600
+   });
    ```
 
 3. **Testing**
    ```javascript
    // Create test DigiLocker credentials
    await axios.post('http://localhost:3000/digilocker/user', {
+     userId: 'test_user',
      clientId: 'test_client_id',
      clientSecret: 'test_client_secret',
      accessToken: 'test_access_token',
      refreshToken: 'test_refresh_token',
      expiresIn: 3600
-   }, {
-     headers: { Authorization: `Bearer ${testJWT}` }
    });
    ```
 
 ### cURL Example
 ```bash
-# Generate JWT first
-TOKEN=$(node scripts/generateToken.js user123)
-
 # Create UserDigiLocker
 curl -X POST http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
+    "userId": "user123",
     "clientId": "sample_client_id",
     "clientSecret": "sample_client_secret",
     "accessToken": "sample_access_token",
@@ -119,8 +120,7 @@ curl -X POST http://localhost:3000/digilocker/user \
 
 ### Endpoint
 ```
-GET /digilocker/user
-Authorization: Bearer <jwt_token>
+GET /digilocker/user?userId=user123
 ```
 
 ### Response (200 OK)
@@ -152,10 +152,8 @@ Authorization: Bearer <jwt_token>
    ```javascript
    const checkDigiLockerStatus = async (userId) => {
      try {
-       const token = generateJWT(userId);
        const response = await axios.get(
-         'http://localhost:3000/digilocker/user',
-         { headers: { Authorization: `Bearer ${token}` }}
+         `http://localhost:3000/digilocker/user?userId=${userId}`
        );
 
        const { isTokenExpired, tokenExpiry } = response.data.data;
@@ -181,9 +179,7 @@ Authorization: Bearer <jwt_token>
    // Check if user has DigiLocker linked before attempting to fetch documents
    const hasDigiLocker = async (userId) => {
      try {
-       await axios.get('http://localhost:3000/digilocker/user', {
-         headers: { Authorization: `Bearer ${generateJWT(userId)}` }
-       });
+       await axios.get(`http://localhost:3000/digilocker/user?userId=${userId}`);
        return true;
      } catch (error) {
        return false;
@@ -191,7 +187,7 @@ Authorization: Bearer <jwt_token>
    };
 
    // Usage
-   if (await hasDigiLocker(userId)) {
+   if (await hasDigiLocker('user123')) {
      fetchDocuments();
    } else {
      redirectToAuthorization();
@@ -201,9 +197,9 @@ Authorization: Bearer <jwt_token>
 3. **Dashboard Display**
    ```javascript
    // Display DigiLocker connection status in user dashboard
-   const response = await axios.get('http://localhost:3000/digilocker/user', {
-     headers: { Authorization: `Bearer ${userToken}` }
-   });
+   const response = await axios.get(
+     `http://localhost:3000/digilocker/user?userId=user123`
+   );
 
    const { isTokenExpired, tokenExpiry, updatedAt } = response.data.data;
 
@@ -213,12 +209,8 @@ Authorization: Bearer <jwt_token>
 
 ### cURL Example
 ```bash
-# Generate JWT
-TOKEN=$(node scripts/generateToken.js user123)
-
 # Get UserDigiLocker
-curl -X GET http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET "http://localhost:3000/digilocker/user?userId=user123"
 ```
 
 ---
@@ -227,8 +219,7 @@ curl -X GET http://localhost:3000/digilocker/user \
 
 ### Endpoint
 ```
-DELETE /digilocker/user
-Authorization: Bearer <jwt_token>
+DELETE /digilocker/user?userId=user123
 ```
 
 ### Response (200 OK)
@@ -252,12 +243,8 @@ Authorization: Bearer <jwt_token>
 1. **User Account Deletion**
    ```javascript
    const deleteUserAccount = async (userId) => {
-     const token = generateJWT(userId);
-
      // Delete DigiLocker credentials
-     await axios.delete('http://localhost:3000/digilocker/user', {
-       headers: { Authorization: `Bearer ${token}` }
-     });
+     await axios.delete(`http://localhost:3000/digilocker/user?userId=${userId}`);
 
      // Delete other user data...
      console.log('DigiLocker credentials removed');
@@ -267,11 +254,9 @@ Authorization: Bearer <jwt_token>
 2. **Unlink DigiLocker**
    ```javascript
    // User wants to unlink DigiLocker from their account
-   const unlinkDigiLocker = async (userToken) => {
+   const unlinkDigiLocker = async (userId) => {
      try {
-       await axios.delete('http://localhost:3000/digilocker/user', {
-         headers: { Authorization: `Bearer ${userToken}` }
-       });
+       await axios.delete(`http://localhost:3000/digilocker/user?userId=${userId}`);
 
        alert('DigiLocker unlinked successfully. You can re-link anytime.');
      } catch (error) {
@@ -284,12 +269,8 @@ Authorization: Bearer <jwt_token>
    ```javascript
    // Admin forces user to re-authorize DigiLocker
    const forceReauthorization = async (userId) => {
-     const token = generateJWT(userId);
-
      // Delete existing credentials
-     await axios.delete('http://localhost:3000/digilocker/user', {
-       headers: { Authorization: `Bearer ${token}` }
-     });
+     await axios.delete(`http://localhost:3000/digilocker/user?userId=${userId}`);
 
      console.log('User will need to re-authorize DigiLocker');
    };
@@ -300,9 +281,7 @@ Authorization: Bearer <jwt_token>
    // Revoke DigiLocker access in case of security breach
    const revokeAccess = async (userId) => {
      try {
-       await axios.delete('http://localhost:3000/digilocker/user', {
-         headers: { Authorization: `Bearer ${generateJWT(userId)}` }
-       });
+       await axios.delete(`http://localhost:3000/digilocker/user?userId=${userId}`);
 
        // Log security event
        console.log(`DigiLocker access revoked for user ${userId}`);
@@ -314,12 +293,8 @@ Authorization: Bearer <jwt_token>
 
 ### cURL Example
 ```bash
-# Generate JWT
-TOKEN=$(node scripts/generateToken.js user123)
-
 # Delete UserDigiLocker
-curl -X DELETE http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN"
+curl -X DELETE "http://localhost:3000/digilocker/user?userId=user123"
 ```
 
 ---
@@ -331,21 +306,18 @@ curl -X DELETE http://localhost:3000/digilocker/user \
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const DigiLockerManager = () => {
+const DigiLockerManager = ({ userId }) => {
   const [digilocker, setDigilocker] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const apiClient = axios.create({
-    baseURL: 'http://localhost:3000',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('authToken')}`
-    }
+    baseURL: 'http://localhost:3000'
   });
 
   // Check DigiLocker status
   const checkStatus = async () => {
     try {
-      const response = await apiClient.get('/digilocker/user');
+      const response = await apiClient.get(`/digilocker/user?userId=${userId}`);
       setDigilocker(response.data.data);
     } catch (error) {
       if (error.response?.status === 404) {
@@ -359,6 +331,7 @@ const DigiLockerManager = () => {
     setLoading(true);
     try {
       const response = await apiClient.post('/digilocker/user', {
+        userId,
         clientId,
         clientSecret,
         accessToken,
@@ -380,7 +353,7 @@ const DigiLockerManager = () => {
 
     setLoading(true);
     try {
-      await apiClient.delete('/digilocker/user');
+      await apiClient.delete(`/digilocker/user?userId=${userId}`);
       setDigilocker(null);
       alert('DigiLocker unlinked successfully');
     } catch (error) {
@@ -427,28 +400,19 @@ export default DigiLockerManager;
 ```javascript
 const express = require('express');
 const axios = require('axios');
-const jwt = require('jsonwebtoken');
 
 const app = express();
 const DIGILOCKER_SERVICE = 'http://localhost:3000';
-
-// Generate internal JWT
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '24h' });
-};
 
 // Create DigiLocker credentials
 app.post('/api/users/:userId/digilocker', async (req, res) => {
   const { userId } = req.params;
   const { clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
 
-  const token = generateToken(userId);
-
   try {
     const response = await axios.post(
       `${DIGILOCKER_SERVICE}/digilocker/user`,
-      { clientId, clientSecret, accessToken, refreshToken, expiresIn },
-      { headers: { Authorization: `Bearer ${token}` }}
+      { userId, clientId, clientSecret, accessToken, refreshToken, expiresIn }
     );
 
     res.json(response.data);
@@ -462,12 +426,10 @@ app.post('/api/users/:userId/digilocker', async (req, res) => {
 // Get DigiLocker status
 app.get('/api/users/:userId/digilocker', async (req, res) => {
   const { userId } = req.params;
-  const token = generateToken(userId);
 
   try {
     const response = await axios.get(
-      `${DIGILOCKER_SERVICE}/digilocker/user`,
-      { headers: { Authorization: `Bearer ${token}` }}
+      `${DIGILOCKER_SERVICE}/digilocker/user?userId=${userId}`
     );
 
     res.json(response.data);
@@ -483,12 +445,10 @@ app.get('/api/users/:userId/digilocker', async (req, res) => {
 // Delete DigiLocker credentials
 app.delete('/api/users/:userId/digilocker', async (req, res) => {
   const { userId } = req.params;
-  const token = generateToken(userId);
 
   try {
     const response = await axios.delete(
-      `${DIGILOCKER_SERVICE}/digilocker/user`,
-      { headers: { Authorization: `Bearer ${token}` }}
+      `${DIGILOCKER_SERVICE}/digilocker/user?userId=${userId}`
     );
 
     res.json(response.data);
@@ -508,23 +468,14 @@ app.listen(4000, () => console.log('App running on port 4000'));
 
 ### Common Errors
 
-**401 Unauthorized**
-```json
-{
-  "success": false,
-  "message": "Invalid token"
-}
-```
-**Solution:** Ensure JWT token is valid and not expired.
-
 **400 Bad Request**
 ```json
 {
   "success": false,
-  "message": "clientId, clientSecret, accessToken, and refreshToken are required"
+  "message": "userId, clientId, clientSecret, accessToken, and refreshToken are required"
 }
 ```
-**Solution:** Provide all required fields (clientId, clientSecret, accessToken, refreshToken) in POST request.
+**Solution:** Provide all required fields (userId, clientId, clientSecret, accessToken, refreshToken) in POST request.
 
 **404 Not Found**
 ```json
@@ -582,26 +533,21 @@ app.listen(4000, () => console.log('App running on port 4000'));
 ```bash
 #!/bin/bash
 
-# Generate JWT
-TOKEN=$(node scripts/generateToken.js test-user-123)
+USER_ID="test-user-123"
 
 echo "1. Creating UserDigiLocker..."
 curl -X POST http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"clientId":"test_client_id","clientSecret":"test_client_secret","accessToken":"test_access","refreshToken":"test_refresh","expiresIn":3600}'
+  -d "{\"userId\":\"$USER_ID\",\"clientId\":\"test_client_id\",\"clientSecret\":\"test_client_secret\",\"accessToken\":\"test_access\",\"refreshToken\":\"test_refresh\",\"expiresIn\":3600}"
 
 echo -e "\n\n2. Getting UserDigiLocker..."
-curl -X GET http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET "http://localhost:3000/digilocker/user?userId=$USER_ID"
 
 echo -e "\n\n3. Deleting UserDigiLocker..."
-curl -X DELETE http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN"
+curl -X DELETE "http://localhost:3000/digilocker/user?userId=$USER_ID"
 
 echo -e "\n\n4. Verifying deletion (should get 404)..."
-curl -X GET http://localhost:3000/digilocker/user \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET "http://localhost:3000/digilocker/user?userId=$USER_ID"
 ```
 
 ---
@@ -615,7 +561,7 @@ curl -X GET http://localhost:3000/digilocker/user \
 | `/digilocker/user` | DELETE | Unlink DigiLocker | Success message |
 
 All endpoints:
-- ✅ Require JWT authentication
+- ✅ Require userId parameter (no authentication)
 - ✅ Encrypt tokens with AES-256-CBC
 - ✅ Support one record per user (upsert)
 - ✅ Return non-sensitive data only

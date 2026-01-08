@@ -5,173 +5,116 @@ This guide explains how to integrate the DigiLocker Authorization Microservice i
 ## Overview
 
 The DigiLocker Service is a standalone microservice that handles:
-- DigiLocker OAuth 2.0 authorization
-- Token management (storage, refresh)
-- DigiLocker API interactions
+- DigiLocker token management (storage, refresh, encryption)
+- DigiLocker API interactions (fetch documents, download files)
+- User credential management (create, read, delete)
 
-Your main application communicates with this service using JWT tokens.
+Your main application communicates with this service using userId parameters (no authentication required).
 
 ## Prerequisites
 
 1. DigiLocker Service running (default: `http://localhost:3000`)
-2. JWT secret shared between your app and DigiLocker Service
-3. User authentication system in your main application
+2. User authentication system in your main application
+3. DigiLocker credentials (clientId, clientSecret, tokens) obtained via your own OAuth flow
 
 ## Integration Steps
 
-### Step 1: Generate JWT Token
+### Step 1: Store DigiLocker Credentials
 
-In your main application, generate a JWT token for authenticated users:
-
-```javascript
-const jwt = require('jsonwebtoken');
-
-// After user logs in to your application
-const generateInternalToken = (userId) => {
-  return jwt.sign(
-    { userId: userId.toString() }, // Use your user's ID
-    process.env.JWT_SECRET, // Same secret as DigiLocker Service
-    { expiresIn: '24h' }
-  );
-};
-
-// Example
-const userToken = generateInternalToken('user123');
-```
-
-### Step 2: Initiate DigiLocker Authorization
+After obtaining DigiLocker credentials via your own OAuth flow, store them in the service:
 
 ```javascript
 const axios = require('axios');
 
-const initiateDigiLockerAuth = async (userToken) => {
+const storeDigiLockerCredentials = async (userId, digilockerData) => {
   try {
-    const response = await axios.get(
-      'http://localhost:3000/digilocker/auth-url',
+    const response = await axios.post(
+      'http://localhost:3000/digilocker/user',
       {
-        headers: {
-          'Authorization': `Bearer ${userToken}`
-        }
+        userId: userId,
+        clientId: digilockerData.clientId,
+        clientSecret: digilockerData.clientSecret,
+        accessToken: digilockerData.accessToken,
+        refreshToken: digilockerData.refreshToken,
+        expiresIn: digilockerData.expiresIn || 3600
       }
     );
 
-    const { authUrl, state } = response.data.data;
-
-    // Redirect user to DigiLocker authorization page
-    return authUrl;
+    return response.data;
   } catch (error) {
-    console.error('Error getting auth URL:', error.response?.data);
+    console.error('Error storing credentials:', error.response?.data);
     throw error;
   }
 };
 ```
 
-### Step 3: Handle User Flow in Frontend
+### Step 2: Check DigiLocker Link Status
+
+Check if a user has DigiLocker credentials stored:
 
 ```javascript
-// React/Vue/Angular example
-const handleDigiLockerConnect = async () => {
+const checkDigiLockerStatus = async (userId) => {
   try {
-    // Get JWT token from your auth system
-    const userToken = localStorage.getItem('authToken');
+    const response = await axios.get(
+      `http://localhost:3000/digilocker/user?userId=${userId}`
+    );
 
-    // Get DigiLocker auth URL
-    const response = await fetch('http://localhost:3000/digilocker/auth-url', {
-      headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
-    });
+    const { isTokenExpired, tokenExpiry } = response.data.data;
 
-    const data = await response.json();
+    if (isTokenExpired) {
+      console.log('Token expired, user needs to re-authorize');
+      return { linked: true, expired: true };
+    }
 
-    // Redirect user to DigiLocker
-    window.location.href = data.data.authUrl;
+    return { linked: true, expired: false };
   } catch (error) {
-    console.error('Failed to connect DigiLocker:', error);
+    if (error.response?.status === 404) {
+      console.log('DigiLocker not linked');
+      return { linked: false };
+    }
+    throw error;
   }
 };
 ```
 
-### Step 4: Handle OAuth Callback
+### Step 3: Fetch DigiLocker Documents
 
-The DigiLocker Service automatically handles the callback. You need to:
-
-1. Configure your redirect URI in DigiLocker Service `.env`:
-   ```
-   DIGILOCKER_REDIRECT_URI=http://localhost:3000/digilocker/callback
-   ```
-
-2. Optionally, create a frontend callback page to show success:
-   ```
-   DIGILOCKER_REDIRECT_URI=http://yourapp.com/digilocker/success
-   ```
-
-   Then redirect to DigiLocker Service:
-   ```javascript
-   // On your success page
-   const urlParams = new URLSearchParams(window.location.search);
-   const code = urlParams.get('code');
-   const state = urlParams.get('state');
-
-   // Forward to DigiLocker Service
-   fetch(`http://localhost:3000/digilocker/callback?code=${code}&state=${state}`)
-     .then(() => {
-       alert('DigiLocker connected successfully!');
-     });
-   ```
-
-### Step 5: Fetch DigiLocker Documents
-
-After authorization, fetch documents using the same JWT token:
+Fetch issued and uploaded documents:
 
 ```javascript
-const getIssuedDocuments = async (userToken) => {
+const getIssuedDocuments = async (userId) => {
   try {
     const response = await axios.get(
-      'http://localhost:3000/digilocker/documents/issued',
-      {
-        headers: {
-          'Authorization': `Bearer ${userToken}`
-        }
-      }
+      `http://localhost:3000/digilocker/documents/issued?userId=${userId}`
     );
 
     return response.data.data;
   } catch (error) {
     if (error.response?.status === 404) {
-      // User hasn't connected DigiLocker yet
       console.log('DigiLocker not linked');
     }
     throw error;
   }
 };
 
-const getUploadedDocuments = async (userToken) => {
+const getUploadedDocuments = async (userId) => {
   const response = await axios.get(
-    'http://localhost:3000/digilocker/documents/uploaded',
-    {
-      headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
-    }
+    `http://localhost:3000/digilocker/documents/uploaded?userId=${userId}`
   );
 
   return response.data.data;
 };
 ```
 
-### Step 6: Download Documents
+### Step 4: Download Documents
+
+Download a specific document:
 
 ```javascript
-const downloadDocument = async (userToken, documentUri) => {
+const downloadDocument = async (userId, documentUri) => {
   try {
     const response = await axios.get(
-      `http://localhost:3000/digilocker/documents/download/${encodeURIComponent(documentUri)}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${userToken}`
-        }
-      }
+      `http://localhost:3000/digilocker/documents/download/${encodeURIComponent(documentUri)}?userId=${userId}`
     );
 
     return response.data.data;
@@ -182,14 +125,34 @@ const downloadDocument = async (userToken, documentUri) => {
 };
 ```
 
+### Step 5: Delete DigiLocker Credentials
+
+Unlink DigiLocker from user account:
+
+```javascript
+const unlinkDigiLocker = async (userId) => {
+  try {
+    const response = await axios.delete(
+      `http://localhost:3000/digilocker/user?userId=${userId}`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error unlinking DigiLocker:', error.response?.data);
+    throw error;
+  }
+};
+```
+
 ## Complete Example: Express.js Backend Integration
 
 ```javascript
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
 const app = express();
+app.use(express.json());
+
 const DIGILOCKER_SERVICE_URL = 'http://localhost:3000';
 
 // Middleware to authenticate users in YOUR application
@@ -203,52 +166,38 @@ const authenticateUser = (req, res, next) => {
   next();
 };
 
-// Generate internal JWT for DigiLocker Service
-const generateInternalToken = (userId) => {
-  return jwt.sign(
-    { userId: userId.toString() },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-};
-
-// Route: Initiate DigiLocker connection
-app.get('/api/connect-digilocker', authenticateUser, async (req, res) => {
+// Route: Store DigiLocker credentials
+app.post('/api/digilocker/credentials', authenticateUser, async (req, res) => {
   try {
-    const internalToken = generateInternalToken(req.userId);
+    const { clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
 
-    const response = await axios.get(
-      `${DIGILOCKER_SERVICE_URL}/digilocker/auth-url`,
+    const response = await axios.post(
+      `${DIGILOCKER_SERVICE_URL}/digilocker/user`,
       {
-        headers: { 'Authorization': `Bearer ${internalToken}` }
+        userId: req.userId,
+        clientId,
+        clientSecret,
+        accessToken,
+        refreshToken,
+        expiresIn
       }
     );
 
-    res.json({
-      authUrl: response.data.data.authUrl
-    });
+    res.json(response.data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate auth URL' });
+    res.status(500).json({ error: 'Failed to store credentials' });
   }
 });
 
 // Route: Get user's DigiLocker documents
 app.get('/api/digilocker/documents', authenticateUser, async (req, res) => {
   try {
-    const internalToken = generateInternalToken(req.userId);
-
     const [issued, uploaded] = await Promise.all([
       axios.get(
-        `${DIGILOCKER_SERVICE_URL}/digilocker/documents/issued`,
-        {
-          headers: { 'Authorization': `Bearer ${internalToken}` }
-        }
+        `${DIGILOCKER_SERVICE_URL}/digilocker/documents/issued?userId=${req.userId}`
       ),
       axios.get(
-        `${DIGILOCKER_SERVICE_URL}/digilocker/documents/uploaded`,
-        {
-          headers: { 'Authorization': `Bearer ${internalToken}` }
-        }
+        `${DIGILOCKER_SERVICE_URL}/digilocker/documents/uploaded?userId=${req.userId}`
       )
     ]);
 
@@ -259,10 +208,23 @@ app.get('/api/digilocker/documents', authenticateUser, async (req, res) => {
   } catch (error) {
     if (error.response?.status === 404) {
       return res.status(404).json({
-        error: 'DigiLocker not connected. Please authorize first.'
+        error: 'DigiLocker not connected. Please store credentials first.'
       });
     }
     res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+});
+
+// Route: Unlink DigiLocker
+app.delete('/api/digilocker/credentials', authenticateUser, async (req, res) => {
+  try {
+    const response = await axios.delete(
+      `${DIGILOCKER_SERVICE_URL}/digilocker/user?userId=${req.userId}`
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to unlink DigiLocker' });
   }
 });
 
@@ -277,31 +239,29 @@ app.listen(4000, () => {
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const DigiLockerConnect = () => {
+const DigiLockerConnect = ({ userId }) => {
   const [documents, setDocuments] = useState(null);
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
 
-  const userToken = localStorage.getItem('authToken'); // Your app's auth token
-
-  const connectDigiLocker = async () => {
+  // Store DigiLocker credentials (after obtaining via your OAuth flow)
+  const storeCredentials = async (digilockerData) => {
     try {
       setLoading(true);
 
-      const response = await axios.get(
-        'http://localhost:3000/digilocker/auth-url',
-        {
-          headers: {
-            'Authorization': `Bearer ${userToken}`
-          }
-        }
-      );
+      await axios.post('http://localhost:4000/api/digilocker/credentials', {
+        clientId: digilockerData.clientId,
+        clientSecret: digilockerData.clientSecret,
+        accessToken: digilockerData.accessToken,
+        refreshToken: digilockerData.refreshToken,
+        expiresIn: digilockerData.expiresIn
+      });
 
-      // Redirect to DigiLocker
-      window.location.href = response.data.data.authUrl;
+      alert('DigiLocker linked successfully!');
+      fetchDocuments();
     } catch (error) {
-      console.error('Failed to connect DigiLocker:', error);
-      alert('Failed to connect DigiLocker');
+      console.error('Failed to store credentials:', error);
+      alert('Failed to link DigiLocker');
     } finally {
       setLoading(false);
     }
@@ -311,21 +271,34 @@ const DigiLockerConnect = () => {
     try {
       setLoading(true);
 
+      // Your backend proxy that adds userId
       const response = await axios.get(
-        'http://localhost:3000/digilocker/documents/issued',
-        {
-          headers: {
-            'Authorization': `Bearer ${userToken}`
-          }
-        }
+        'http://localhost:4000/api/digilocker/documents'
       );
 
-      setDocuments(response.data.data);
+      setDocuments(response.data.issued);
       setConnected(true);
     } catch (error) {
       if (error.response?.status === 404) {
         setConnected(false);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unlinkDigiLocker = async () => {
+    try {
+      setLoading(true);
+
+      await axios.delete('http://localhost:4000/api/digilocker/credentials');
+
+      alert('DigiLocker unlinked successfully');
+      setConnected(false);
+      setDocuments(null);
+    } catch (error) {
+      console.error('Failed to unlink DigiLocker:', error);
+      alert('Failed to unlink DigiLocker');
     } finally {
       setLoading(false);
     }
@@ -340,13 +313,17 @@ const DigiLockerConnect = () => {
       <h2>DigiLocker Integration</h2>
 
       {!connected ? (
-        <button onClick={connectDigiLocker} disabled={loading}>
-          {loading ? 'Connecting...' : 'Connect DigiLocker'}
-        </button>
+        <div>
+          <p>DigiLocker not linked</p>
+          <button onClick={() => {/* Trigger your OAuth flow */}}>
+            Connect DigiLocker
+          </button>
+        </div>
       ) : (
         <div>
           <h3>Your Documents</h3>
-          <button onClick={fetchDocuments}>Refresh</button>
+          <button onClick={fetchDocuments} disabled={loading}>Refresh</button>
+          <button onClick={unlinkDigiLocker} disabled={loading}>Unlink</button>
           {documents && <pre>{JSON.stringify(documents, null, 2)}</pre>}
         </div>
       )}
@@ -369,9 +346,9 @@ try {
   const message = error.response?.data?.message;
 
   switch (status) {
-    case 401:
-      // Invalid or expired JWT token
-      console.error('Authentication failed:', message);
+    case 400:
+      // Missing required parameters
+      console.error('Bad request:', message);
       break;
 
     case 404:
@@ -392,23 +369,32 @@ try {
 
 ## Security Best Practices
 
-1. **Never expose JWT secret**: Keep `JWT_SECRET` in environment variables
+1. **Protect userId**: Ensure your application authenticates users and provides correct userId
 2. **Use HTTPS in production**: Always use secure connections
-3. **Validate tokens**: DigiLocker Service validates all JWT tokens
-4. **Token expiry**: Tokens expire after 24h by default
+3. **Encrypt sensitive data**: DigiLocker Service automatically encrypts tokens and clientSecret
+4. **Token expiry**: Service automatically refreshes tokens before expiry
 5. **CORS**: Configure `ALLOWED_ORIGINS` in DigiLocker Service
 6. **Rate limiting**: Add rate limiting to your API gateway
+7. **Access control**: Implement authorization in your backend to ensure users can only access their own data
 
 ## Testing
 
-Use the provided scripts:
+Test the endpoints using curl:
 
 ```bash
-# Generate test JWT token
-node digilocker-service/scripts/generateToken.js user123
+# Store credentials
+curl -X POST http://localhost:3000/digilocker/user \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"test123","clientId":"client_id","clientSecret":"secret","accessToken":"token","refreshToken":"refresh","expiresIn":3600}'
 
-# Test endpoints
-./digilocker-service/scripts/testEndpoints.sh
+# Get user status
+curl "http://localhost:3000/digilocker/user?userId=test123"
+
+# Get documents
+curl "http://localhost:3000/digilocker/documents/issued?userId=test123"
+
+# Delete credentials
+curl -X DELETE "http://localhost:3000/digilocker/user?userId=test123"
 ```
 
 ## Architecture Diagram
@@ -418,35 +404,43 @@ node digilocker-service/scripts/generateToken.js user123
 │  Your Frontend  │
 │   (React/Vue)   │
 └────────┬────────┘
-         │ HTTP Requests
+         │ HTTP Requests (Authenticated)
          ▼
-┌─────────────────┐      JWT Auth       ┌──────────────────────┐
-│  Your Backend   │◄────────────────────►│  DigiLocker Service  │
-│  (Express/NestJS)│                     │   (This Service)     │
-└─────────────────┘                     └──────────┬───────────┘
+┌─────────────────┐                     ┌──────────────────────┐
+│  Your Backend   │────────────────────►│  DigiLocker Service  │
+│  (Express/NestJS)│  userId parameter  │   (This Service)     │
+│                 │◄────────────────────│                      │
+└─────────────────┘    Encrypted Data   └──────────┬───────────┘
          │                                          │
-         │                                          │ OAuth 2.0
+         │                                          │ DigiLocker API
          ▼                                          ▼
 ┌─────────────────┐                     ┌──────────────────────┐
 │   Your MongoDB  │                     │  API Setu/DigiLocker │
-│  (User Data)    │                     │       (OAuth)        │
+│  (User Data)    │                     │      (Documents)     │
 └─────────────────┘                     └──────────────────────┘
-                                                    │
-                                                    ▼
-                                         ┌──────────────────────┐
-                                         │  DigiLocker Service  │
-                                         │      MongoDB         │
-                                         │   (Tokens Storage)   │
-                                         └──────────────────────┘
+
+                              ┌──────────────────────┐
+                              │  DigiLocker Service  │
+                              │      MongoDB         │
+                              │ (Encrypted Tokens)   │
+                              └──────────────────────┘
+
+Flow:
+1. Your frontend obtains DigiLocker credentials via your own OAuth flow
+2. Your backend sends credentials to DigiLocker Service with userId
+3. DigiLocker Service encrypts and stores tokens in MongoDB
+4. Your backend requests documents using userId parameter
+5. DigiLocker Service auto-refreshes tokens and fetches from DigiLocker API
 ```
 
 ## Support
 
 For issues or questions:
 1. Check logs in DigiLocker Service
-2. Verify JWT token is valid
+2. Verify userId parameter is being sent correctly
 3. Ensure MongoDB is running
-4. Check DigiLocker API credentials
+4. Check DigiLocker API credentials are valid
+5. Verify tokens are not expired
 
 ## Next Steps
 

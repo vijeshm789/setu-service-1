@@ -7,7 +7,14 @@ const logger = require('../utils/logger');
  */
 const getIssuedDocuments = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId query parameter is required',
+      });
+    }
 
     const documents = await digilockerService.getIssuedDocuments(userId);
 
@@ -26,7 +33,14 @@ const getIssuedDocuments = async (req, res, next) => {
  */
 const getUploadedDocuments = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId query parameter is required',
+      });
+    }
 
     const documents = await digilockerService.getUploadedDocuments(userId);
 
@@ -45,8 +59,15 @@ const getUploadedDocuments = async (req, res, next) => {
  */
 const downloadDocument = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
+    const { userId } = req.query;
     const { uri } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId query parameter is required',
+      });
+    }
 
     if (!uri) {
       return res.status(400).json({
@@ -72,13 +93,12 @@ const downloadDocument = async (req, res, next) => {
  */
 const createUserDigiLocker = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
-    const { clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
+    const { userId, clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
 
-    if (!clientId || !clientSecret || !accessToken || !refreshToken) {
+    if (!userId || !clientId || !clientSecret || !accessToken || !refreshToken) {
       return res.status(400).json({
         success: false,
-        message: 'clientId, clientSecret, accessToken, and refreshToken are required',
+        message: 'userId, clientId, clientSecret, accessToken, and refreshToken are required',
       });
     }
 
@@ -103,11 +123,18 @@ const createUserDigiLocker = async (req, res, next) => {
 
 /**
  * GET /digilocker/user
- * Get UserDigiLocker record for authenticated user
+ * Get UserDigiLocker record
  */
 const getUserDigiLocker = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId query parameter is required',
+      });
+    }
 
     const result = await digilockerService.getUserDigiLocker(userId);
 
@@ -122,11 +149,18 @@ const getUserDigiLocker = async (req, res, next) => {
 
 /**
  * DELETE /digilocker/user
- * Delete UserDigiLocker record for authenticated user
+ * Delete UserDigiLocker record
  */
 const deleteUserDigiLocker = async (req, res, next) => {
   try {
-    const userId = req.userId; // From JWT middleware
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId query parameter is required',
+      });
+    }
 
     const result = await digilockerService.deleteUserDigiLocker(userId);
 

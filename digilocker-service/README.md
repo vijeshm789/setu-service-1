@@ -116,8 +116,7 @@ Response:
 #### 1. Get Issued Documents
 
 ```
-GET /digilocker/documents/issued
-Authorization: Bearer <internal_jwt>
+GET /digilocker/documents/issued?userId=user123
 ```
 
 Response:
@@ -133,8 +132,7 @@ Response:
 #### 2. Get Uploaded Documents
 
 ```
-GET /digilocker/documents/uploaded
-Authorization: Bearer <internal_jwt>
+GET /digilocker/documents/uploaded?userId=user123
 ```
 
 Response:
@@ -150,8 +148,7 @@ Response:
 #### 3. Download Document
 
 ```
-GET /digilocker/documents/download/:uri
-Authorization: Bearer <internal_jwt>
+GET /digilocker/documents/download/:uri?userId=user123
 ```
 
 Response:
@@ -170,13 +167,13 @@ Response:
 
 ```
 POST /digilocker/user
-Authorization: Bearer <internal_jwt>
 Content-Type: application/json
 ```
 
 Request Body:
 ```json
 {
+  "userId": "user123",
   "clientId": "your_digilocker_client_id",
   "clientSecret": "your_digilocker_client_secret",
   "accessToken": "digilocker_access_token",
@@ -208,8 +205,7 @@ Response:
 #### 5. Get UserDigiLocker
 
 ```
-GET /digilocker/user
-Authorization: Bearer <internal_jwt>
+GET /digilocker/user?userId=user123
 ```
 
 Response:
@@ -232,8 +228,7 @@ Response:
 #### 6. Delete UserDigiLocker
 
 ```
-DELETE /digilocker/user
-Authorization: Bearer <internal_jwt>
+DELETE /digilocker/user?userId=user123
 ```
 
 Response:
@@ -248,23 +243,6 @@ Response:
 
 ## Authentication Flow
 
-### Internal JWT Authentication
-
-All protected endpoints require an internal JWT token:
-
-```javascript
-// Generate JWT (in your main application)
-const jwt = require('jsonwebtoken');
-const token = jwt.sign(
-  { userId: 'user123' },
-  process.env.JWT_SECRET,
-  { expiresIn: '24h' }
-);
-
-// Use token in requests
-Authorization: Bearer <token>
-```
-
 ### DigiLocker Credential Management
 
 Users provide DigiLocker credentials manually via the POST /digilocker/user endpoint:
@@ -272,9 +250,9 @@ Users provide DigiLocker credentials manually via the POST /digilocker/user endp
 ```
 1. Client → Obtains DigiLocker credentials (clientId, clientSecret, tokens)
    ↓
-2. Client → POST /digilocker/user (with JWT and credentials)
+2. Client → POST /digilocker/user (with userId and credentials in body)
    ↓
-3. Service → Validates JWT and credentials
+3. Service → Validates credentials
    ↓
 4. Service → Encrypts clientSecret and tokens
    ↓
@@ -283,14 +261,35 @@ Users provide DigiLocker credentials manually via the POST /digilocker/user endp
 6. Service → Returns success response
 ```
 
+### Usage Flow
+
+```
+1. Create credentials:
+   POST /digilocker/user
+   Body: { userId, clientId, clientSecret, accessToken, refreshToken, expiresIn }
+
+2. Fetch documents:
+   GET /digilocker/documents/issued?userId=user123
+   GET /digilocker/documents/uploaded?userId=user123
+
+3. Download document:
+   GET /digilocker/documents/download/doc-uri?userId=user123
+
+4. Check status:
+   GET /digilocker/user?userId=user123
+
+5. Delete credentials:
+   DELETE /digilocker/user?userId=user123
+```
+
 ## Security Features
 
 1. **Token Encryption**: All DigiLocker tokens and clientSecret encrypted with AES-256-CBC
-2. **JWT Validation**: Internal authentication on all protected routes
-3. **HTTPS Ready**: Helmet middleware for security headers
-4. **No Sensitive Data Persistence**: Aadhaar numbers not stored
-5. **Automatic Token Refresh**: Tokens refreshed before expiry (5-min buffer)
-6. **Per-User Credentials**: Each user can have their own DigiLocker client configuration
+2. **HTTPS Ready**: Helmet middleware for security headers
+3. **No Sensitive Data Persistence**: Aadhaar numbers not stored
+4. **Automatic Token Refresh**: Tokens refreshed before expiry (5-min buffer)
+5. **Per-User Credentials**: Each user can have their own DigiLocker client configuration
+6. **No Authentication Required**: Direct access with userId parameter
 
 ## Database Schema
 

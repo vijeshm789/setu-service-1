@@ -1,48 +1,47 @@
 const express = require('express');
 const router = express.Router();
 const digilockerController = require('../controllers/digilockerController');
-const { authenticate } = require('../middlewares/auth');
 
 /**
  * GET /digilocker/documents/issued
  * Fetch issued documents from DigiLocker
- * Protected: Requires JWT authentication
+ * Query param: userId
  */
-router.get('/documents/issued', authenticate, digilockerController.getIssuedDocuments);
+router.get('/documents/issued', digilockerController.getIssuedDocuments);
 
 /**
  * GET /digilocker/documents/uploaded
  * Fetch uploaded documents from DigiLocker
- * Protected: Requires JWT authentication
+ * Query param: userId
  */
-router.get('/documents/uploaded', authenticate, digilockerController.getUploadedDocuments);
+router.get('/documents/uploaded', digilockerController.getUploadedDocuments);
 
 /**
  * GET /digilocker/documents/download/:uri
  * Download document from DigiLocker
- * Protected: Requires JWT authentication
+ * Query param: userId
  */
-router.get('/documents/download/:uri', authenticate, digilockerController.downloadDocument);
+router.get('/documents/download/:uri', digilockerController.downloadDocument);
 
 /**
  * POST /digilocker/user
  * Create or update UserDigiLocker record manually
- * Protected: Requires JWT authentication
+ * Body: userId, clientId, clientSecret, accessToken, refreshToken, expiresIn
  */
-router.post('/user', authenticate, digilockerController.createUserDigiLocker);
+router.post('/user', digilockerController.createUserDigiLocker);
 
 /**
  * GET /digilocker/user
- * Get UserDigiLocker record for authenticated user
- * Protected: Requires JWT authentication
+ * Get UserDigiLocker record
+ * Query param: userId
  */
-router.get('/user', authenticate, digilockerController.getUserDigiLocker);
+router.get('/user', digilockerController.getUserDigiLocker);
 
 /**
  * DELETE /digilocker/user
- * Delete UserDigiLocker record for authenticated user
- * Protected: Requires JWT authentication
+ * Delete UserDigiLocker record
+ * Query param: userId
  */
-router.delete('/user', authenticate, digilockerController.deleteUserDigiLocker);
+router.delete('/user', digilockerController.deleteUserDigiLocker);
 
 module.exports = router;

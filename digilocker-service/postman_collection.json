@@ -4,16 +4,6 @@
     "description": "Complete API collection for DigiLocker Authorization Microservice",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{jwt_token}}",
-        "type": "string"
-      }
-    ]
-  },
   "variable": [
     {
       "key": "base_url",
@@ -21,8 +11,8 @@
       "type": "string"
     },
     {
-      "key": "jwt_token",
-      "value": "",
+      "key": "userId",
+      "value": "user123",
       "type": "string"
     }
   ],
@@ -54,17 +44,17 @@
           "name": "Get Issued Documents",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/digilocker/documents/issued",
+              "raw": "{{base_url}}/digilocker/documents/issued?userId={{userId}}",
               "host": ["{{base_url}}"],
-              "path": ["digilocker", "documents", "issued"]
+              "path": ["digilocker", "documents", "issued"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
             }
           }
         },
@@ -72,17 +62,17 @@
           "name": "Get Uploaded Documents",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/digilocker/documents/uploaded",
+              "raw": "{{base_url}}/digilocker/documents/uploaded?userId={{userId}}",
               "host": ["{{base_url}}"],
-              "path": ["digilocker", "documents", "uploaded"]
+              "path": ["digilocker", "documents", "uploaded"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
             }
           }
         },
@@ -90,17 +80,17 @@
           "name": "Download Document",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/digilocker/documents/download/:uri",
+              "raw": "{{base_url}}/digilocker/documents/download/:uri?userId={{userId}}",
               "host": ["{{base_url}}"],
               "path": ["digilocker", "documents", "download", ":uri"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ],
               "variable": [
                 {
                   "key": "uri",
@@ -116,11 +106,6 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              },
-              {
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
@@ -128,7 +113,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clientId\": \"sample_client_id\",\n  \"clientSecret\": \"sample_client_secret\",\n  \"accessToken\": \"sample_access_token\",\n  \"refreshToken\": \"sample_refresh_token\",\n  \"expiresIn\": 3600\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"clientId\": \"sample_client_id\",\n  \"clientSecret\": \"sample_client_secret\",\n  \"accessToken\": \"sample_access_token\",\n  \"refreshToken\": \"sample_refresh_token\",\n  \"expiresIn\": 3600\n}"
             },
             "url": {
               "raw": "{{base_url}}/digilocker/user",
@@ -141,17 +126,17 @@
           "name": "Get UserDigiLocker",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/digilocker/user",
+              "raw": "{{base_url}}/digilocker/user?userId={{userId}}",
               "host": ["{{base_url}}"],
-              "path": ["digilocker", "user"]
+              "path": ["digilocker", "user"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
             }
           }
         },
@@ -159,17 +144,17 @@
           "name": "Delete UserDigiLocker",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/digilocker/user",
+              "raw": "{{base_url}}/digilocker/user?userId={{userId}}",
               "host": ["{{base_url}}"],
-              "path": ["digilocker", "user"]
+              "path": ["digilocker", "user"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
             }
           }
         }
