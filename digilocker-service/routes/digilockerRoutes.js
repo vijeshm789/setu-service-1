@@ -4,20 +4,6 @@ const digilockerController = require('../controllers/digilockerController');
 const { authenticate } = require('../middlewares/auth');
 
 /**
- * GET /digilocker/auth-url
- * Generate DigiLocker authorization URL
- * Protected: Requires JWT authentication
- */
-router.get('/auth-url', authenticate, digilockerController.getAuthUrl);
-
-/**
- * GET /digilocker/callback
- * Handle OAuth callback from DigiLocker
- * Public: No authentication required (callback from DigiLocker)
- */
-router.get('/callback', digilockerController.handleCallback);
-
-/**
  * GET /digilocker/documents/issued
  * Fetch issued documents from DigiLocker
  * Protected: Requires JWT authentication

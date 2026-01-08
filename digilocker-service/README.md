@@ -111,59 +111,9 @@ Response:
 }
 ```
 
-### DigiLocker Authorization
-
-#### 1. Get Authorization URL
-
-```
-GET /digilocker/auth-url
-Authorization: Bearer <internal_jwt>
-```
-
-Response:
-```json
-{
-  "success": true,
-  "data": {
-    "authUrl": "https://api.setu.co/api/digilocker/authorize?...",
-    "state": "random_state_token"
-  }
-}
-```
-
-**Flow:**
-1. Client calls this endpoint with JWT
-2. Service generates DigiLocker OAuth URL
-3. Client redirects user to authUrl
-4. User completes DigiLocker authentication
-
-#### 2. OAuth Callback
-
-```
-GET /digilocker/callback?code=xxx&state=yyy
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "DigiLocker authorization successful",
-  "data": {
-    "userId": "user123",
-    "success": true
-  }
-}
-```
-
-**Flow:**
-1. DigiLocker redirects here after user authorization
-2. Service exchanges code for access_token and refresh_token
-3. Tokens are encrypted and stored in MongoDB
-4. One record per user (upsert logic)
-
 ### Document Management
 
-#### 3. Get Issued Documents
+#### 1. Get Issued Documents
 
 ```
 GET /digilocker/documents/issued
@@ -180,7 +130,7 @@ Response:
 }
 ```
 
-#### 4. Get Uploaded Documents
+#### 2. Get Uploaded Documents
 
 ```
 GET /digilocker/documents/uploaded
@@ -197,7 +147,7 @@ Response:
 }
 ```
 
-#### 5. Download Document
+#### 3. Download Document
 
 ```
 GET /digilocker/documents/download/:uri
@@ -216,7 +166,7 @@ Response:
 
 ### User Management
 
-#### 6. Create UserDigiLocker
+#### 4. Create UserDigiLocker
 
 ```
 POST /digilocker/user
@@ -255,7 +205,7 @@ Response:
 - Admin operations
 - Storing tokens obtained from external sources
 
-#### 7. Get UserDigiLocker
+#### 5. Get UserDigiLocker
 
 ```
 GET /digilocker/user
@@ -279,7 +229,7 @@ Response:
 
 **Use Case:** Check if user has DigiLocker linked and token status.
 
-#### 8. Delete UserDigiLocker
+#### 6. Delete UserDigiLocker
 
 ```
 DELETE /digilocker/user
@@ -315,34 +265,32 @@ const token = jwt.sign(
 Authorization: Bearer <token>
 ```
 
-### DigiLocker OAuth Flow
+### DigiLocker Credential Management
+
+Users provide DigiLocker credentials manually via the POST /digilocker/user endpoint:
 
 ```
-1. Client → GET /digilocker/auth-url (with JWT)
+1. Client → Obtains DigiLocker credentials (clientId, clientSecret, tokens)
    ↓
-2. Service → Returns DigiLocker OAuth URL
+2. Client → POST /digilocker/user (with JWT and credentials)
    ↓
-3. Client → Redirects user to DigiLocker
+3. Service → Validates JWT and credentials
    ↓
-4. User → Completes DigiLocker authentication
+4. Service → Encrypts clientSecret and tokens
    ↓
-5. DigiLocker → Redirects to /digilocker/callback?code=xxx
+5. Service → Stores in MongoDB (one record per user)
    ↓
-6. Service → Exchanges code for tokens
-   ↓
-7. Service → Encrypts and stores tokens in MongoDB
-   ↓
-8. Service → Returns success response
+6. Service → Returns success response
 ```
 
 ## Security Features
 
-1. **Token Encryption**: All DigiLocker tokens encrypted with AES-256-CBC
+1. **Token Encryption**: All DigiLocker tokens and clientSecret encrypted with AES-256-CBC
 2. **JWT Validation**: Internal authentication on all protected routes
-3. **State Parameter**: CSRF protection in OAuth flow
-4. **HTTPS Ready**: Helmet middleware for security headers
-5. **No Sensitive Data Persistence**: Aadhaar numbers not stored
-6. **Automatic Token Refresh**: Tokens refreshed before expiry (5-min buffer)
+3. **HTTPS Ready**: Helmet middleware for security headers
+4. **No Sensitive Data Persistence**: Aadhaar numbers not stored
+5. **Automatic Token Refresh**: Tokens refreshed before expiry (5-min buffer)
+6. **Per-User Credentials**: Each user can have their own DigiLocker client configuration
 
 ## Database Schema
 
@@ -350,6 +298,7 @@ Authorization: Bearer <token>
 UserDigiLocker {
   userId: String (unique, indexed)
   digilockerClientId: String
+  digilockerClientSecret: String (encrypted)
   digilockerAccessToken: String (encrypted)
   digilockerRefreshToken: String (encrypted)
   tokenExpiry: Date

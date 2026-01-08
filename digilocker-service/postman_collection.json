@@ -51,49 +51,6 @@
       "name": "DigiLocker",
       "item": [
         {
-          "name": "Get Auth URL",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/digilocker/auth-url",
-              "host": ["{{base_url}}"],
-              "path": ["digilocker", "auth-url"]
-            }
-          }
-        },
-        {
-          "name": "OAuth Callback",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/digilocker/callback?code=sample_code&state=sample_state:user123",
-              "host": ["{{base_url}}"],
-              "path": ["digilocker", "callback"],
-              "query": [
-                {
-                  "key": "code",
-                  "value": "sample_code"
-                },
-                {
-                  "key": "state",
-                  "value": "sample_state:user123"
-                }
-              ]
-            }
-          }
-        },
-        {
           "name": "Get Issued Documents",
           "request": {
             "method": "GET",

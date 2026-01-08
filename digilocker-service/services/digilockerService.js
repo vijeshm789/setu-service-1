@@ -1,118 +1,10 @@
 const axios = require('axios');
 const querystring = require('querystring');
-const crypto = require('crypto');
 const config = require('../config/config');
 const UserDigiLocker = require('../models/UserDigiLocker');
 const { encrypt, decrypt } = require('../utils/encryption');
 const AppError = require('../utils/errorHandler');
 const logger = require('../utils/logger');
-
-/**
- * Generate DigiLocker authorization URL
- * @param {string} userId - User ID
- * @returns {Object} Authorization URL and state
- */
-const generateAuthUrl = (userId) => {
-  // Generate random state for CSRF protection
-  const state = crypto.randomBytes(32).toString('hex');
-
-  const params = {
-    client_id: config.digilocker.clientId,
-    redirect_uri: config.digilocker.redirectUri,
-    response_type: 'code',
-    state: `${state}:${userId}`, // Embed userId in state
-  };
-
-  const authUrl = `${config.digilocker.authUrl}?${querystring.stringify(params)}`;
-
-  logger.info('Generated DigiLocker auth URL', { userId });
-
-  return {
-    authUrl,
-    state,
-  };
-};
-
-/**
- * Exchange authorization code for access token
- * @param {string} code - Authorization code
- * @param {string} state - State parameter
- * @returns {Object} Token data
- */
-const exchangeCodeForToken = async (code, state) => {
-  try {
-    // Extract userId from state
-    const [stateToken, userId] = state.split(':');
-
-    if (!userId) {
-      throw new AppError('Invalid state parameter', 400);
-    }
-
-    const params = {
-      client_id: config.digilocker.clientId,
-      client_secret: config.digilocker.clientSecret,
-      code,
-      redirect_uri: config.digilocker.redirectUri,
-      grant_type: 'authorization_code',
-    };
-
-    logger.info('Exchanging code for token', { userId });
-
-    const response = await axios.post(
-      config.digilocker.tokenUrl,
-      querystring.stringify(params),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
-
-    const { access_token, refresh_token, expires_in } = response.data;
-
-    if (!access_token || !refresh_token) {
-      throw new AppError('Failed to retrieve tokens from DigiLocker', 500);
-    }
-
-    // Calculate token expiry
-    const tokenExpiry = new Date(Date.now() + expires_in * 1000);
-
-    // Encrypt tokens before saving
-    const encryptedAccessToken = encrypt(access_token);
-    const encryptedRefreshToken = encrypt(refresh_token);
-    const encryptedClientSecret = encrypt(config.digilocker.clientSecret);
-
-    // Upsert: Update if exists, create if not (ONE record per user)
-    await UserDigiLocker.findOneAndUpdate(
-      { userId },
-      {
-        userId,
-        digilockerClientId: config.digilocker.clientId,
-        digilockerClientSecret: encryptedClientSecret,
-        digilockerAccessToken: encryptedAccessToken,
-        digilockerRefreshToken: encryptedRefreshToken,
-        tokenExpiry,
-      },
-      { upsert: true, new: true }
-    );
-
-    logger.info('DigiLocker tokens saved successfully', { userId });
-
-    return {
-      userId,
-      success: true,
-    };
-  } catch (error) {
-    logger.error('Error exchanging code for token', error);
-    if (error.response) {
-      throw new AppError(
-        `DigiLocker API error: ${error.response.data.message || error.response.statusText}`,
-        error.response.status
-      );
-    }
-    throw error;
-  }
-};
 
 /**
  * Refresh access token using refresh token
@@ -409,8 +301,6 @@ const deleteUserDigiLocker = async (userId) => {
 };
 
 module.exports = {
-  generateAuthUrl,
-  exchangeCodeForToken,
   refreshAccessToken,
   getValidAccessToken,
   getIssuedDocuments,
