@@ -152,6 +152,69 @@
               ]
             }
           }
+        },
+        {
+          "name": "Create UserDigiLocker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accessToken\": \"sample_access_token\",\n  \"refreshToken\": \"sample_refresh_token\",\n  \"expiresIn\": 3600\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/digilocker/user",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "user"]
+            }
+          }
+        },
+        {
+          "name": "Get UserDigiLocker",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/user",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "user"]
+            }
+          }
+        },
+        {
+          "name": "Delete UserDigiLocker",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/user",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "user"]
+            }
+          }
         }
       ]
     }

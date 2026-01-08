@@ -295,6 +295,113 @@ const downloadDocument = async (userId, uri) => {
   }
 };
 
+/**
+ * Create or update UserDigiLocker record manually
+ * @param {string} userId - User ID
+ * @param {string} accessToken - DigiLocker access token
+ * @param {string} refreshToken - DigiLocker refresh token
+ * @param {number} expiresIn - Token expiry in seconds
+ * @returns {Object} Created/updated record
+ */
+const createUserDigiLocker = async (userId, accessToken, refreshToken, expiresIn) => {
+  try {
+    if (!userId || !accessToken || !refreshToken) {
+      throw new AppError('userId, accessToken, and refreshToken are required', 400);
+    }
+
+    // Calculate token expiry
+    const tokenExpiry = expiresIn
+      ? new Date(Date.now() + expiresIn * 1000)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000); // Default 24 hours
+
+    // Encrypt tokens before saving
+    const encryptedAccessToken = encrypt(accessToken);
+    const encryptedRefreshToken = encrypt(refreshToken);
+
+    logger.info('Creating/updating UserDigiLocker record', { userId });
+
+    // Upsert: Update if exists, create if not (ONE record per user)
+    const userDigiLocker = await UserDigiLocker.findOneAndUpdate(
+      { userId },
+      {
+        userId,
+        digilockerClientId: config.digilocker.clientId,
+        digilockerAccessToken: encryptedAccessToken,
+        digilockerRefreshToken: encryptedRefreshToken,
+        tokenExpiry,
+      },
+      { upsert: true, new: true }
+    );
+
+    logger.info('UserDigiLocker record created/updated successfully', { userId });
+
+    return {
+      userId: userDigiLocker.userId,
+      digilockerClientId: userDigiLocker.digilockerClientId,
+      tokenExpiry: userDigiLocker.tokenExpiry,
+      createdAt: userDigiLocker.createdAt,
+      updatedAt: userDigiLocker.updatedAt,
+    };
+  } catch (error) {
+    logger.error('Error creating UserDigiLocker record', error);
+    throw error;
+  }
+};
+
+/**
+ * Get UserDigiLocker record for a user
+ * @param {string} userId - User ID
+ * @returns {Object} UserDigiLocker record (without sensitive data)
+ */
+const getUserDigiLocker = async (userId) => {
+  try {
+    const userDigiLocker = await UserDigiLocker.findOne({ userId });
+
+    if (!userDigiLocker) {
+      throw new AppError('DigiLocker credentials not found for user', 404);
+    }
+
+    logger.info('Retrieved UserDigiLocker record', { userId });
+
+    return {
+      userId: userDigiLocker.userId,
+      digilockerClientId: userDigiLocker.digilockerClientId,
+      tokenExpiry: userDigiLocker.tokenExpiry,
+      isTokenExpired: new Date() >= userDigiLocker.tokenExpiry,
+      createdAt: userDigiLocker.createdAt,
+      updatedAt: userDigiLocker.updatedAt,
+    };
+  } catch (error) {
+    logger.error('Error retrieving UserDigiLocker record', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete UserDigiLocker record for a user
+ * @param {string} userId - User ID
+ * @returns {Object} Deletion result
+ */
+const deleteUserDigiLocker = async (userId) => {
+  try {
+    const result = await UserDigiLocker.findOneAndDelete({ userId });
+
+    if (!result) {
+      throw new AppError('DigiLocker credentials not found for user', 404);
+    }
+
+    logger.info('UserDigiLocker record deleted', { userId });
+
+    return {
+      success: true,
+      message: 'DigiLocker credentials deleted successfully',
+    };
+  } catch (error) {
+    logger.error('Error deleting UserDigiLocker record', error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateAuthUrl,
   exchangeCodeForToken,
@@ -303,4 +410,7 @@ module.exports = {
   getIssuedDocuments,
   getUploadedDocuments,
   downloadDocument,
+  createUserDigiLocker,
+  getUserDigiLocker,
+  deleteUserDigiLocker,
 };

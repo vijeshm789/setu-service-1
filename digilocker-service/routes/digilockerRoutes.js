@@ -38,4 +38,25 @@ router.get('/documents/uploaded', authenticate, digilockerController.getUploaded
  */
 router.get('/documents/download/:uri', authenticate, digilockerController.downloadDocument);
 
+/**
+ * POST /digilocker/user
+ * Create or update UserDigiLocker record manually
+ * Protected: Requires JWT authentication
+ */
+router.post('/user', authenticate, digilockerController.createUserDigiLocker);
+
+/**
+ * GET /digilocker/user
+ * Get UserDigiLocker record for authenticated user
+ * Protected: Requires JWT authentication
+ */
+router.get('/user', authenticate, digilockerController.getUserDigiLocker);
+
+/**
+ * DELETE /digilocker/user
+ * Delete UserDigiLocker record for authenticated user
+ * Protected: Requires JWT authentication
+ */
+router.delete('/user', authenticate, digilockerController.deleteUserDigiLocker);
+
 module.exports = router;

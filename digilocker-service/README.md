@@ -214,6 +214,86 @@ Response:
 }
 ```
 
+### User Management
+
+#### 6. Create UserDigiLocker
+
+```
+POST /digilocker/user
+Authorization: Bearer <internal_jwt>
+Content-Type: application/json
+```
+
+Request Body:
+```json
+{
+  "accessToken": "digilocker_access_token",
+  "refreshToken": "digilocker_refresh_token",
+  "expiresIn": 3600
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "UserDigiLocker record created/updated successfully",
+  "data": {
+    "userId": "user123",
+    "digilockerClientId": "client_id",
+    "tokenExpiry": "2024-01-08T11:00:00.000Z",
+    "createdAt": "2024-01-08T10:00:00.000Z",
+    "updatedAt": "2024-01-08T10:00:00.000Z"
+  }
+}
+```
+
+**Use Case:** Manually create or update DigiLocker credentials for a user. Useful for:
+- Testing purposes
+- Admin operations
+- Storing tokens obtained from external sources
+
+#### 7. Get UserDigiLocker
+
+```
+GET /digilocker/user
+Authorization: Bearer <internal_jwt>
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user123",
+    "digilockerClientId": "client_id",
+    "tokenExpiry": "2024-01-08T11:00:00.000Z",
+    "isTokenExpired": false,
+    "createdAt": "2024-01-08T10:00:00.000Z",
+    "updatedAt": "2024-01-08T10:00:00.000Z"
+  }
+}
+```
+
+**Use Case:** Check if user has DigiLocker linked and token status.
+
+#### 8. Delete UserDigiLocker
+
+```
+DELETE /digilocker/user
+Authorization: Bearer <internal_jwt>
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "DigiLocker credentials deleted successfully"
+}
+```
+
+**Use Case:** Unlink DigiLocker credentials for a user. User will need to re-authorize.
+
 ## Authentication Flow
 
 ### Internal JWT Authentication
