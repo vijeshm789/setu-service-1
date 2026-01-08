@@ -24,6 +24,8 @@ Content-Type: application/json
 ### Request Body
 ```json
 {
+  "clientId": "your_digilocker_client_id",
+  "clientSecret": "your_digilocker_client_secret",
   "accessToken": "your_digilocker_access_token",
   "refreshToken": "your_digilocker_refresh_token",
   "expiresIn": 3600
@@ -31,6 +33,8 @@ Content-Type: application/json
 ```
 
 **Parameters:**
+- `clientId` (required): DigiLocker client ID
+- `clientSecret` (required): DigiLocker client secret
 - `accessToken` (required): DigiLocker access token
 - `refreshToken` (required): DigiLocker refresh token
 - `expiresIn` (optional): Token expiry in seconds (default: 86400 - 24 hours)
@@ -58,6 +62,8 @@ Content-Type: application/json
    const response = await axios.post(
      'http://localhost:3000/digilocker/user',
      {
+       clientId: 'your_client_id',
+       clientSecret: 'your_client_secret',
        accessToken: 'existing_access_token',
        refreshToken: 'existing_refresh_token',
        expiresIn: 3600
@@ -79,6 +85,8 @@ Content-Type: application/json
    ```javascript
    // Create test DigiLocker credentials
    await axios.post('http://localhost:3000/digilocker/user', {
+     clientId: 'test_client_id',
+     clientSecret: 'test_client_secret',
      accessToken: 'test_access_token',
      refreshToken: 'test_refresh_token',
      expiresIn: 3600
@@ -97,6 +105,8 @@ curl -X POST http://localhost:3000/digilocker/user \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
+    "clientId": "sample_client_id",
+    "clientSecret": "sample_client_secret",
     "accessToken": "sample_access_token",
     "refreshToken": "sample_refresh_token",
     "expiresIn": 3600
@@ -345,10 +355,12 @@ const DigiLockerManager = () => {
   };
 
   // Create/Update DigiLocker credentials
-  const createDigiLocker = async (accessToken, refreshToken, expiresIn) => {
+  const createDigiLocker = async (clientId, clientSecret, accessToken, refreshToken, expiresIn) => {
     setLoading(true);
     try {
       const response = await apiClient.post('/digilocker/user', {
+        clientId,
+        clientSecret,
         accessToken,
         refreshToken,
         expiresIn
@@ -428,14 +440,14 @@ const generateToken = (userId) => {
 // Create DigiLocker credentials
 app.post('/api/users/:userId/digilocker', async (req, res) => {
   const { userId } = req.params;
-  const { accessToken, refreshToken, expiresIn } = req.body;
+  const { clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
 
   const token = generateToken(userId);
 
   try {
     const response = await axios.post(
       `${DIGILOCKER_SERVICE}/digilocker/user`,
-      { accessToken, refreshToken, expiresIn },
+      { clientId, clientSecret, accessToken, refreshToken, expiresIn },
       { headers: { Authorization: `Bearer ${token}` }}
     );
 
@@ -509,10 +521,10 @@ app.listen(4000, () => console.log('App running on port 4000'));
 ```json
 {
   "success": false,
-  "message": "accessToken and refreshToken are required"
+  "message": "clientId, clientSecret, accessToken, and refreshToken are required"
 }
 ```
-**Solution:** Provide both accessToken and refreshToken in POST request.
+**Solution:** Provide all required fields (clientId, clientSecret, accessToken, refreshToken) in POST request.
 
 **404 Not Found**
 ```json
@@ -577,7 +589,7 @@ echo "1. Creating UserDigiLocker..."
 curl -X POST http://localhost:3000/digilocker/user \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"accessToken":"test_access","refreshToken":"test_refresh","expiresIn":3600}'
+  -d '{"clientId":"test_client_id","clientSecret":"test_client_secret","accessToken":"test_access","refreshToken":"test_refresh","expiresIn":3600}'
 
 echo -e "\n\n2. Getting UserDigiLocker..."
 curl -X GET http://localhost:3000/digilocker/user \

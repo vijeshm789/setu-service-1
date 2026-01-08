@@ -171,7 +171,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accessToken\": \"sample_access_token\",\n  \"refreshToken\": \"sample_refresh_token\",\n  \"expiresIn\": 3600\n}"
+              "raw": "{\n  \"clientId\": \"sample_client_id\",\n  \"clientSecret\": \"sample_client_secret\",\n  \"accessToken\": \"sample_access_token\",\n  \"refreshToken\": \"sample_refresh_token\",\n  \"expiresIn\": 3600\n}"
             },
             "url": {
               "raw": "{{base_url}}/digilocker/user",

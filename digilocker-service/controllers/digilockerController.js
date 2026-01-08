@@ -122,17 +122,19 @@ const downloadDocument = async (req, res, next) => {
 const createUserDigiLocker = async (req, res, next) => {
   try {
     const userId = req.userId; // From JWT middleware
-    const { accessToken, refreshToken, expiresIn } = req.body;
+    const { clientId, clientSecret, accessToken, refreshToken, expiresIn } = req.body;
 
-    if (!accessToken || !refreshToken) {
+    if (!clientId || !clientSecret || !accessToken || !refreshToken) {
       return res.status(400).json({
         success: false,
-        message: 'accessToken and refreshToken are required',
+        message: 'clientId, clientSecret, accessToken, and refreshToken are required',
       });
     }
 
     const result = await digilockerService.createUserDigiLocker(
       userId,
+      clientId,
+      clientSecret,
       accessToken,
       refreshToken,
       expiresIn

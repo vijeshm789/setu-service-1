@@ -12,6 +12,10 @@ const userDigiLockerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    digilockerClientSecret: {
+      type: String,
+      required: true,
+    },
     digilockerAccessToken: {
       type: String,
       required: true,

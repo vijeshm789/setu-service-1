@@ -227,6 +227,8 @@ Content-Type: application/json
 Request Body:
 ```json
 {
+  "clientId": "your_digilocker_client_id",
+  "clientSecret": "your_digilocker_client_secret",
   "accessToken": "digilocker_access_token",
   "refreshToken": "digilocker_refresh_token",
   "expiresIn": 3600
@@ -240,7 +242,7 @@ Response:
   "message": "UserDigiLocker record created/updated successfully",
   "data": {
     "userId": "user123",
-    "digilockerClientId": "client_id",
+    "digilockerClientId": "your_digilocker_client_id",
     "tokenExpiry": "2024-01-08T11:00:00.000Z",
     "createdAt": "2024-01-08T10:00:00.000Z",
     "updatedAt": "2024-01-08T10:00:00.000Z"

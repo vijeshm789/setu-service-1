@@ -80,6 +80,7 @@ const exchangeCodeForToken = async (code, state) => {
     // Encrypt tokens before saving
     const encryptedAccessToken = encrypt(access_token);
     const encryptedRefreshToken = encrypt(refresh_token);
+    const encryptedClientSecret = encrypt(config.digilocker.clientSecret);
 
     // Upsert: Update if exists, create if not (ONE record per user)
     await UserDigiLocker.findOneAndUpdate(
@@ -87,6 +88,7 @@ const exchangeCodeForToken = async (code, state) => {
       {
         userId,
         digilockerClientId: config.digilocker.clientId,
+        digilockerClientSecret: encryptedClientSecret,
         digilockerAccessToken: encryptedAccessToken,
         digilockerRefreshToken: encryptedRefreshToken,
         tokenExpiry,
@@ -298,15 +300,17 @@ const downloadDocument = async (userId, uri) => {
 /**
  * Create or update UserDigiLocker record manually
  * @param {string} userId - User ID
+ * @param {string} clientId - DigiLocker client ID
+ * @param {string} clientSecret - DigiLocker client secret
  * @param {string} accessToken - DigiLocker access token
  * @param {string} refreshToken - DigiLocker refresh token
  * @param {number} expiresIn - Token expiry in seconds
  * @returns {Object} Created/updated record
  */
-const createUserDigiLocker = async (userId, accessToken, refreshToken, expiresIn) => {
+const createUserDigiLocker = async (userId, clientId, clientSecret, accessToken, refreshToken, expiresIn) => {
   try {
-    if (!userId || !accessToken || !refreshToken) {
-      throw new AppError('userId, accessToken, and refreshToken are required', 400);
+    if (!userId || !clientId || !clientSecret || !accessToken || !refreshToken) {
+      throw new AppError('userId, clientId, clientSecret, accessToken, and refreshToken are required', 400);
     }
 
     // Calculate token expiry
@@ -314,7 +318,8 @@ const createUserDigiLocker = async (userId, accessToken, refreshToken, expiresIn
       ? new Date(Date.now() + expiresIn * 1000)
       : new Date(Date.now() + 24 * 60 * 60 * 1000); // Default 24 hours
 
-    // Encrypt tokens before saving
+    // Encrypt sensitive data before saving
+    const encryptedClientSecret = encrypt(clientSecret);
     const encryptedAccessToken = encrypt(accessToken);
     const encryptedRefreshToken = encrypt(refreshToken);
 
@@ -325,7 +330,8 @@ const createUserDigiLocker = async (userId, accessToken, refreshToken, expiresIn
       { userId },
       {
         userId,
-        digilockerClientId: config.digilocker.clientId,
+        digilockerClientId: clientId,
+        digilockerClientSecret: encryptedClientSecret,
         digilockerAccessToken: encryptedAccessToken,
         digilockerRefreshToken: encryptedRefreshToken,
         tokenExpiry,
