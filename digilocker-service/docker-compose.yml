@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  digilocker-service:
+    build: .
+    container_name: digilocker-service
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongodb:27017/digilocker-service
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=${JWT_EXPIRY}
+      - DIGILOCKER_CLIENT_ID=${DIGILOCKER_CLIENT_ID}
+      - DIGILOCKER_CLIENT_SECRET=${DIGILOCKER_CLIENT_SECRET}
+      - DIGILOCKER_REDIRECT_URI=${DIGILOCKER_REDIRECT_URI}
+      - DIGILOCKER_AUTH_URL=${DIGILOCKER_AUTH_URL}
+      - DIGILOCKER_TOKEN_URL=${DIGILOCKER_TOKEN_URL}
+      - DIGILOCKER_API_BASE_URL=${DIGILOCKER_API_BASE_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENCRYPTION_IV=${ENCRYPTION_IV}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - digilocker-network
+
+  mongodb:
+    image: mongo:7
+    container_name: digilocker-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    restart: unless-stopped
+    networks:
+      - digilocker-network
+
+volumes:
+  mongodb-data:
+    driver: local
+
+networks:
+  digilocker-network:
+    driver: bridge

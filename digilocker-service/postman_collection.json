@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "DigiLocker Service API",
+    "description": "Complete API collection for DigiLocker Authorization Microservice",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DigiLocker",
+      "item": [
+        {
+          "name": "Get Auth URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/auth-url",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "auth-url"]
+            }
+          }
+        },
+        {
+          "name": "OAuth Callback",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/digilocker/callback?code=sample_code&state=sample_state:user123",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "callback"],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "sample_code"
+                },
+                {
+                  "key": "state",
+                  "value": "sample_state:user123"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Issued Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/documents/issued",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "documents", "issued"]
+            }
+          }
+        },
+        {
+          "name": "Get Uploaded Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/documents/uploaded",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "documents", "uploaded"]
+            }
+          }
+        },
+        {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/digilocker/documents/download/:uri",
+              "host": ["{{base_url}}"],
+              "path": ["digilocker", "documents", "download", ":uri"],
+              "variable": [
+                {
+                  "key": "uri",
+                  "value": "sample-document-uri"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
